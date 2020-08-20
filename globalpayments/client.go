@@ -12,13 +12,14 @@ import (
 
 // Client manages communication with Global Payments API
 type Client struct {
-	HTTPClient *http.Client
-	BaseURL    *url.URL
-	HashSecret string
-	MerchantID string
-	APIPath    string
+	HTTPClient       *http.Client
+	BaseURL          *url.URL
+	HashSecret       string
+	RebateHashSecret string
+	MerchantID       string
+	APIPath          string
 	// Services used for communicating different actions of Global Payments API
-	CardStorage *CardStorage
+	CardStorage *CardStorageService
 }
 
 type service struct {
@@ -31,8 +32,10 @@ const (
 	DefaultBaseURL    = "https://test.realexpayments.com"
 	DefaultMerchantID = "realexsandbox"
 	DefaultHashSecret = "Po8lRRT67a"
+	DefaultRebateHash = "Po8lRRT67a"
 	DefaultPath       = "/epage-remote.cgi"
 )
+
 // Global Payment Error values
 type DependencyError struct {
 	ResponseCode string
@@ -68,9 +71,9 @@ func (err *InvalidAccountError) Error() string {
 		err.Response.Request.URL, err.Response.StatusCode, err.ResponseCode, err.Message)
 }
 
-// NewClient returns a Global Payments API Client. If no functional options are provided, Default values will be used to initiate Client.
-// Note: Default Values initiate requests to Global payments test environment, only meant for basic requests.
-// The services of a client divide the API into logical chunks and correspond to the structure of the Global Payments documentation at https://developer.globalpay.com/#!/api/card-storage.
+// NewClient returns a Global Payments API Client. If no functional options are provided, Default values will be used to initiate the client.
+// Note: Default Values initiate requests to Global payments test environment.
+// The services of a client divide the API into logical chunks and correspond to the structure of the Global Payments documentation at https://developer.globalpay.com/api/getting-started.
 func NewClient(options ...func(*Client)) (*Client, error) {
 
 	httpClient := &http.Client{}
@@ -82,9 +85,9 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	}
 
 	client := &Client{HTTPClient: httpClient, BaseURL: baseURL, HashSecret: DefaultHashSecret,
-		MerchantID: DefaultMerchantID}
+		MerchantID: DefaultMerchantID, RebateHashSecret: DefaultRebateHash}
 
-	client.CardStorage = &CardStorage{client: client, Path: DefaultPath}
+	client.CardStorage = &CardStorageService{client: client, Path: DefaultPath}
 
 	for _, option := range options {
 		option(client)
@@ -98,7 +101,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 }
 
 // NewRequest creates API Request. Relative URLs should be specified with preceding slash.
-// The value specified by body is XML encoded.
+// If specified, the value pointed to by body is XML encoded and included within the request body.
 func (client *Client) NewRequest(method, urlStr string, body interface{}) (*http.Request, error) {
 
 	rel, err := client.BaseURL.Parse(urlStr)

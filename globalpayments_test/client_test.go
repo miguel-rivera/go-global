@@ -1,4 +1,4 @@
-package globalpayments_test
+package globalpayments
 
 import (
 	"encoding/xml"
@@ -145,7 +145,7 @@ func TestClient_Do(t *testing.T) {
 	body := &request{}
 
 	client.Do(req, body)
-	if!reflect.DeepEqual(body, requestBody) {
+	if !reflect.DeepEqual(body, requestBody) {
 		t.Errorf("Response Body = %v, want %v", body, requestBody)
 	}
 }
