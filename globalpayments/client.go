@@ -27,6 +27,12 @@ type service struct {
 	Path   string
 }
 
+type ClientAPI interface {
+	NewClient(options ...func(*Client)) (*Client, error)
+	NewRequest(method, urlStr string, body interface{}) (*http.Request, error)
+	Do(req *http.Request, v interface{}) (*http.Response, error)
+}
+
 // Global Payment Default test environment constants
 const (
 	DefaultBaseURL    = "https://test.realexpayments.com"
