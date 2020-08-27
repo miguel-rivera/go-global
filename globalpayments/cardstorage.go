@@ -94,6 +94,7 @@ type Card struct {
 type CardStorageResponse struct {
 	XMLName             xml.Name `xml:"response"`
 	Timestamp           string   `xml:"timestamp,attr"`
+	MerchantID          string   `xml:"merchantid"`
 	Account             string   `xml:"account"`
 	OrderID             string   `xml:"orderid"`
 	AuthCode            string   `xml:"authcode"`
@@ -140,13 +141,6 @@ type CardStorageServiceAPI interface {
 		error)
 	DeleteCard(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
 		error)
-	validateResponseHash(httpResponse *http.Response, response *CardStorageResponse) (err error)
-	hashAndEncode(m Marshaller, str string) (hashAndEncodedString string, err error)
-	buildRequestHash(request *CardStorageRequest) (err error)
-	formatTime(t TimeFormatter, layout string) string
-	addCommonValuesToRequest(request *CardStorageRequest) (err error)
-	transmitRequest(request *CardStorageRequest) (response *CardStorageResponse, httpResponse *http.Response,
-		err error)
 }
 
 type Marshaller interface {
@@ -158,9 +152,26 @@ type TimeFormatter interface {
 	Format(layout string) string
 }
 
+var (
+	Now = time.Now
+)
+
+func formatTime(t TimeFormatter, layout string) string {
+	return t.Format(layout)
+}
+
+func hashAndEncode(m Marshaller, str string) (hashAndEncodedString string, err error) {
+
+	_, err = io.WriteString(m, str)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(m.Sum(nil)), nil
+}
+
 func (err *ValidationError) Error() string {
-	return fmt.Sprintf("Validation Hash Error: %v, %v : %d", err.Response.Request.Method,
-		err.Response.Request.URL, err.Response.StatusCode)
+	return fmt.Sprintf("Validation Hash Error: method: %v, path: %v, status code:%d", err.Response.Request.Method,
+		err.Response.Request.URL.Path, err.Response.StatusCode)
 }
 
 func (cardStorage *CardStorageService) Authorize(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
@@ -259,24 +270,20 @@ func (cardStorage *CardStorageService) transmitRequest(request *CardStorageReque
 }
 
 func (cardStorage *CardStorageService) addCommonValuesToRequest(request *CardStorageRequest) (err error) {
-	request.Timestamp = cardStorage.formatTime(time.Now(), "20060102150405")
+	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
 	err = cardStorage.buildRequestHash(request)
 	return err
 }
 
-func (cardStorage *CardStorageService) formatTime(t TimeFormatter, layout string) string {
-	return t.Format(layout)
-}
-
 func (cardStorage *CardStorageService) buildRequestHash(request *CardStorageRequest) (err error) {
 
-	hashedElementsString, err := cardStorage.hashAndEncode(sha1.New(), strings.Join(request.elementsToHash, "."))
+	hashedElementsString, err := hashAndEncode(sha1.New(), strings.Join(request.elementsToHash, "."))
 	if err != nil {
 		return err
 	}
 
-	requestHash, err := cardStorage.hashAndEncode(sha1.New(), hashedElementsString+"."+request.sharedSecret)
+	requestHash, err := hashAndEncode(sha1.New(), hashedElementsString+"."+request.sharedSecret)
 	if err != nil {
 		return err
 	}
@@ -284,35 +291,21 @@ func (cardStorage *CardStorageService) buildRequestHash(request *CardStorageRequ
 	return nil
 }
 
-func (cardStorage *CardStorageService) hashAndEncode(m Marshaller, str string) (hashAndEncodedString string, err error) {
-
-	_, err = io.WriteString(m, str)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(m.Sum(nil)), nil
-}
-
 func (cardStorage *CardStorageService) validateResponseHash(httpResponse *http.Response, response *CardStorageResponse) (err error) {
 
-	elementsToHash := []string{response.Timestamp, cardStorage.client.MerchantID, response.OrderID, response.Result, response.Message, response.PasRef, response.AuthCode}
+	elementsToHash := []string{response.Timestamp, response.MerchantID, response.OrderID, response.Result, response.Message, response.PasRef, response.AuthCode}
 
-	h1 := sha1.New()
-
-	_, err = io.WriteString(h1, strings.Join(elementsToHash, "."))
+	hashedElementsString, err := hashAndEncode(sha1.New(), strings.Join(elementsToHash, "."))
 	if err != nil {
 		return err
 	}
-	hashedElementsString := hex.EncodeToString(h1.Sum(nil))
 
-	h2 := sha1.New()
-	_, err = io.WriteString(h2, hashedElementsString+"."+cardStorage.client.HashSecret)
+	calculatedResponseHash, err := hashAndEncode(sha1.New(), hashedElementsString+"."+cardStorage.client.HashSecret)
 	if err != nil {
 		return err
 	}
-	responseHash := hex.EncodeToString(h1.Sum(nil))
 
-	if responseHash == response.SHA1Hash {
+	if calculatedResponseHash == response.SHA1Hash {
 		return nil
 	}
 	return &ValidationError{httpResponse}

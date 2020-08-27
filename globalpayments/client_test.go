@@ -9,8 +9,6 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
-
-	. "github.com/miguel-rivera/go-global/globalpayments"
 )
 
 type request struct {
