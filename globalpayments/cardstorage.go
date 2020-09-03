@@ -1,33 +1,27 @@
 package globalpayments
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/xml"
-	"fmt"
-	"io"
 	"net/http"
-	"strings"
 	"time"
 )
 
 type CardStorageRequest struct {
-	XMLName        xml.Name     `xml:"request"`
-	Type           string       `xml:"type,attr"`
-	Timestamp      string       `xml:"timestamp,attr"`
-	MerchantID     string       `xml:"merchantid"`
-	Account        string       `xml:"account,omitempty"`
-	Channel        string       `xml:"channel,omitempty"`
-	OrderID        string       `xml:"orderid"`
-	PayerRef       string       `xml:"payerref"`
-	PaymentMethod  string       `xml:"paymentmethod,omitempty"`
-	Sha1Hash       string       `xml:"sha1hash"`
-	Amount         *Amount      `xml:"amount,omitempty"`
-	AutoSettle     *AutoSettle  `xml:"autosettle,omitempty"`
-	PaymentData    *PaymentData `xml:"paymentdata,omitempty"`
-	Card           *Card        `xml:"card,omitempty"`
-	elementsToHash []string
-	sharedSecret   string
+	XMLName       xml.Name     `xml:"request"`
+	Type          string       `xml:"type,attr"`
+	Timestamp     string       `xml:"timestamp,attr"`
+	MerchantID    string       `xml:"merchantid"`
+	Account       string       `xml:"account,omitempty"`
+	Channel       string       `xml:"channel,omitempty"`
+	OrderID       string       `xml:"orderid"`
+	PayerRef      string       `xml:"payerref"`
+	PaymentMethod string       `xml:"paymentmethod,omitempty"`
+	Sha1Hash      string       `xml:"sha1hash"`
+	Amount        *Amount      `xml:"amount,omitempty"`
+	AutoSettle    *AutoSettle  `xml:"autosettle,omitempty"`
+	PaymentData   *PaymentData `xml:"paymentdata,omitempty"`
+	Card          *Card        `xml:"card,omitempty"`
+	serviceAuthenticator
 }
 
 type Amount struct {
@@ -91,61 +85,27 @@ type Card struct {
 	Type           string `xml:"type"`
 }
 
-type CardStorageResponse struct {
-	XMLName             xml.Name `xml:"response"`
-	Timestamp           string   `xml:"timestamp,attr"`
-	MerchantID          string   `xml:"merchantid"`
-	Account             string   `xml:"account"`
-	OrderID             string   `xml:"orderid"`
-	AuthCode            string   `xml:"authcode"`
-	Result              string   `xml:"result"`
-	CVN                 string   `xml:"cvnresult"`
-	AVSPostcodeResponse string   `xml:"avspostcoderesponse"`
-	AVSAddressResponse  string   `xml:"avsaddressresponse"`
-	BatchId             string   `xml:"batchid"`
-	Message             string   `xml:"message"`
-	PasRef              string   `xml:"pasref"`
-	TimeTaken           string   `xml:"timetaken"`
-	AuthTimeTaken       string   `xml:"authtimetaken"`
-	CardIssuer          string   `xml:"cardIssuer"`
-	SHA1Hash            string   `xml:"sha1hash"`
-}
-
-type CardIssuer struct {
-	Bank        string `xml:"bank"`
-	Country     string `xml:"country"`
-	CountryCode string `xml:"countrycode"`
-	Region      string `xml:"region"`
-}
-
-type CardStorageService service
-
-type ValidationError struct {
-	Response *http.Response
+type CardStorageService struct {
+	service
 }
 
 type CardStorageServiceAPI interface {
-	Authorize(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	Authorize(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-	Validate(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	Validate(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-	Credit(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	Credit(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-	CreateCustomer(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	CreateCustomer(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-	EditCustomer(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	EditCustomer(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-	StoreCard(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	StoreCard(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-	EditCard(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	EditCard(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-	DeleteCard(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+	DeleteCard(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 		error)
-}
-
-type Marshaller interface {
-	io.Writer
-	Sum(b []byte) []byte
 }
 
 type TimeFormatter interface {
@@ -160,153 +120,122 @@ func formatTime(t TimeFormatter, layout string) string {
 	return t.Format(layout)
 }
 
-func hashAndEncode(m Marshaller, str string) (hashAndEncodedString string, err error) {
-
-	_, err = io.WriteString(m, str)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(m.Sum(nil)), nil
-}
-
-func (err *ValidationError) Error() string {
-	return fmt.Sprintf("Validation Hash Error: method: %v, path: %v, status code:%d", err.Response.Request.Method,
-		err.Response.Request.URL.Path, err.Response.StatusCode)
-}
-
-func (cardStorage *CardStorageService) Authorize(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
+func (cardStorage *CardStorageService) Authorize(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 	error) {
+	request.Timestamp = formatTime(Now(), "20060102150405")
+	request.MerchantID = cardStorage.client.MerchantID
 	request.Type = "receipt-in"
 	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
 	request.sharedSecret = cardStorage.client.HashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) Validate(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
-	error) {
-	request.Type = "receipt-in-otb"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.PayerRef}
-	request.sharedSecret = cardStorage.client.HashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) Credit(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
-	error) {
-	request.Type = "payment-outs"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
-	request.sharedSecret = cardStorage.client.RebateHashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) CreateCustomer(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
-	error) {
-	request.Type = "payer-new"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
-	request.sharedSecret = cardStorage.client.HashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) EditCustomer(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
-	error) {
-	request.Type = "payer-edit"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
-	request.sharedSecret = cardStorage.client.HashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) StoreCard(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
-	error) {
-	request.Type = "card-new"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef, request.Card.CardHolderName, request.Card.Number}
-	request.sharedSecret = cardStorage.client.HashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) EditCard(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
-	error) {
-	request.Type = "card-update-card"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.Card.Ref, request.Card.ExpDate, request.Card.Number}
-	request.sharedSecret = cardStorage.client.HashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) DeleteCard(request *CardStorageRequest) (*CardStorageResponse, *http.Response,
-	error) {
-	request.Type = "card-cancel-card"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.Card.Ref}
-	request.sharedSecret = cardStorage.client.HashSecret
-	cardStorage.addCommonValuesToRequest(request)
-	return cardStorage.transmitRequest(request)
-}
-
-func (cardStorage *CardStorageService) transmitRequest(request *CardStorageRequest) (response *CardStorageResponse, httpResponse *http.Response,
-	err error) {
-
-	response = &CardStorageResponse{}
-	httpRequest, err := cardStorage.client.NewRequest("POST", cardStorage.Path, request)
-
+	signature, err := request.buildSignature()
 	if err != nil {
 		return nil, nil, err
 	}
-
-	httpResponse, err = cardStorage.client.Do(httpRequest, response)
-	if err != nil {
-		return nil, httpResponse, err
-	}
-
-	err = cardStorage.validateResponseHash(httpResponse, response)
-	if err != nil {
-		return nil, httpResponse, err
-	}
-
-	return response, httpResponse, nil
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
 }
 
-func (cardStorage *CardStorageService) addCommonValuesToRequest(request *CardStorageRequest) (err error) {
+func (cardStorage *CardStorageService) Validate(request *CardStorageRequest) (*ServiceResponse, *http.Response,
+	error) {
 	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
-	err = cardStorage.buildRequestHash(request)
-	return err
+	request.Type = "receipt-in-otb"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.PayerRef}
+	request.sharedSecret = cardStorage.client.HashSecret
+	signature, err := request.buildSignature()
+	if err != nil {
+		return nil, nil, err
+	}
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
 }
 
-func (cardStorage *CardStorageService) buildRequestHash(request *CardStorageRequest) (err error) {
-
-	hashedElementsString, err := hashAndEncode(sha1.New(), strings.Join(request.elementsToHash, "."))
+func (cardStorage *CardStorageService) Credit(request *CardStorageRequest) (*ServiceResponse, *http.Response,
+	error) {
+	request.Timestamp = formatTime(Now(), "20060102150405")
+	request.MerchantID = cardStorage.client.MerchantID
+	request.Type = "payment-outs"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
+	request.sharedSecret = cardStorage.client.RebateHashSecret
+	signature, err := request.buildSignature()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-
-	requestHash, err := hashAndEncode(sha1.New(), hashedElementsString+"."+request.sharedSecret)
-	if err != nil {
-		return err
-	}
-	request.Sha1Hash = requestHash
-	return nil
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
 }
 
-func (cardStorage *CardStorageService) validateResponseHash(httpResponse *http.Response, response *CardStorageResponse) (err error) {
-
-	elementsToHash := []string{response.Timestamp, response.MerchantID, response.OrderID, response.Result, response.Message, response.PasRef, response.AuthCode}
-
-	hashedElementsString, err := hashAndEncode(sha1.New(), strings.Join(elementsToHash, "."))
+func (cardStorage *CardStorageService) CreateCustomer(request *CardStorageRequest) (*ServiceResponse, *http.Response,
+	error) {
+	request.Timestamp = formatTime(Now(), "20060102150405")
+	request.MerchantID = cardStorage.client.MerchantID
+	request.Type = "payer-new"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
+	request.sharedSecret = cardStorage.client.HashSecret
+	signature, err := request.buildSignature()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
+}
 
-	calculatedResponseHash, err := hashAndEncode(sha1.New(), hashedElementsString+"."+cardStorage.client.HashSecret)
+func (cardStorage *CardStorageService) EditCustomer(request *CardStorageRequest) (*ServiceResponse, *http.Response,
+	error) {
+	request.Timestamp = formatTime(Now(), "20060102150405")
+	request.MerchantID = cardStorage.client.MerchantID
+	request.Type = "payer-edit"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
+	request.sharedSecret = cardStorage.client.HashSecret
+	signature, err := request.buildSignature()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
+}
 
-	if calculatedResponseHash == response.SHA1Hash {
-		return nil
+func (cardStorage *CardStorageService) StoreCard(request *CardStorageRequest) (*ServiceResponse, *http.Response,
+	error) {
+	request.Timestamp = formatTime(Now(), "20060102150405")
+	request.MerchantID = cardStorage.client.MerchantID
+	request.Type = "card-new"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef, request.Card.CardHolderName, request.Card.Number}
+	request.sharedSecret = cardStorage.client.HashSecret
+	signature, err := request.buildSignature()
+	if err != nil {
+		return nil, nil, err
 	}
-	return &ValidationError{httpResponse}
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
+}
+
+func (cardStorage *CardStorageService) EditCard(request *CardStorageRequest) (*ServiceResponse, *http.Response,
+	error) {
+	request.Timestamp = formatTime(Now(), "20060102150405")
+	request.MerchantID = cardStorage.client.MerchantID
+	request.Type = "card-update-card"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.Card.Ref, request.Card.ExpDate, request.Card.Number}
+	request.sharedSecret = cardStorage.client.HashSecret
+	signature, err := request.buildSignature()
+	if err != nil {
+		return nil, nil, err
+	}
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
+}
+
+func (cardStorage *CardStorageService) DeleteCard(request *CardStorageRequest) (*ServiceResponse, *http.Response,
+	error) {
+	request.Timestamp = formatTime(Now(), "20060102150405")
+	request.MerchantID = cardStorage.client.MerchantID
+	request.Type = "card-cancel-card"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.Card.Ref}
+	request.sharedSecret = cardStorage.client.HashSecret
+	signature, err := request.buildSignature()
+	if err != nil {
+		return nil, nil, err
+	}
+	request.Sha1Hash = signature
+	return cardStorage.transmitRequest(request)
 }
