@@ -20,6 +20,7 @@ type CardStorageRequest struct {
 	Amount        *Amount      `xml:"amount,omitempty"`
 	AutoSettle    *AutoSettle  `xml:"autosettle,omitempty"`
 	PaymentData   *PaymentData `xml:"paymentdata,omitempty"`
+	Payer         *Payer       `xml:"payer,omitempty"`
 	Card          *Card        `xml:"card,omitempty"`
 	serviceAuthenticator
 }
@@ -67,13 +68,17 @@ type PhoneNumbers struct {
 }
 
 type Address struct {
-	Line1    string `xml:"line1"`
-	Line2    string `xml:"line2"`
-	Line3    string `xml:"line3"`
-	City     string `xml:"city"`
-	County   string `xml:"county"`
-	PostCode string `xml:"postcode"`
-	Country  string `xml:"country"`
+	Line1    string   `xml:"line1"`
+	Line2    string   `xml:"line2"`
+	Line3    string   `xml:"line3"`
+	City     string   `xml:"city"`
+	County   string   `xml:"county"`
+	PostCode string   `xml:"postcode"`
+	Country  *Country `xml:"country"`
+}
+
+type Country struct {
+	Code string `xml:"ref,attr"`
 }
 
 type Card struct {
@@ -112,14 +117,62 @@ type TimeFormatter interface {
 	Format(layout string) string
 }
 
-var (
-	Now = time.Now
-)
+var Now = time.Now
 
 func formatTime(t TimeFormatter, layout string) string {
 	return t.Format(layout)
 }
 
+//used getters for objects used within the hash
+
+func (request CardStorageRequest) getPayerRef() string {
+	if request.Payer != nil {
+		return request.Payer.Ref
+	}
+	return ""
+}
+
+func (request CardStorageRequest) getAmount() string {
+	if request.Amount != nil {
+		return request.Amount.Amount
+	}
+	return ""
+}
+
+func (request CardStorageRequest) getCurrency() string {
+	if request.Amount != nil {
+		return request.Amount.Currency
+	}
+	return ""
+}
+
+func (request CardStorageRequest) getCardHolderName() string {
+	if request.Card != nil {
+		return request.Card.CardHolderName
+	}
+	return ""
+}
+
+func (request CardStorageRequest) getCardNumber() string {
+	if request.Card != nil {
+		return request.Card.Number
+	}
+	return ""
+}
+
+func (request CardStorageRequest) getCardRef() string {
+	if request.Card != nil {
+		return request.Card.Ref
+	}
+	return ""
+}
+
+func (request CardStorageRequest) getCardExpDate() string {
+	if request.Card != nil {
+		return request.Card.ExpDate
+	}
+	return ""
+}
 func (cardStorage *CardStorageService) Authorize(request *CardStorageRequest) (*ServiceResponse, *http.Response,
 	error) {
 	request.Timestamp = formatTime(Now(), "20060102150405")
@@ -154,8 +207,8 @@ func (cardStorage *CardStorageService) Credit(request *CardStorageRequest) (*Ser
 	error) {
 	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
-	request.Type = "payment-outs"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
+	request.Type = "payment-out"
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.getAmount(), request.getCurrency(), request.PayerRef}
 	request.sharedSecret = cardStorage.client.RebateHashSecret
 	signature, err := request.buildSignature()
 	if err != nil {
@@ -170,7 +223,7 @@ func (cardStorage *CardStorageService) CreateCustomer(request *CardStorageReques
 	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
 	request.Type = "payer-new"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.getAmount(), request.getCurrency(), request.getPayerRef()}
 	request.sharedSecret = cardStorage.client.HashSecret
 	signature, err := request.buildSignature()
 	if err != nil {
@@ -185,7 +238,7 @@ func (cardStorage *CardStorageService) EditCustomer(request *CardStorageRequest)
 	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
 	request.Type = "payer-edit"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef}
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.getAmount(), request.getCurrency(), request.PayerRef}
 	request.sharedSecret = cardStorage.client.HashSecret
 	signature, err := request.buildSignature()
 	if err != nil {
@@ -200,7 +253,7 @@ func (cardStorage *CardStorageService) StoreCard(request *CardStorageRequest) (*
 	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
 	request.Type = "card-new"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.Amount.Amount, request.Amount.Currency, request.PayerRef, request.Card.CardHolderName, request.Card.Number}
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.OrderID, request.getAmount(), request.getCurrency(), request.PayerRef, request.getCardHolderName(), request.getCardNumber()}
 	request.sharedSecret = cardStorage.client.HashSecret
 	signature, err := request.buildSignature()
 	if err != nil {
@@ -215,7 +268,7 @@ func (cardStorage *CardStorageService) EditCard(request *CardStorageRequest) (*S
 	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
 	request.Type = "card-update-card"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.Card.Ref, request.Card.ExpDate, request.Card.Number}
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.getCardRef(), request.getCardExpDate(), request.getCardNumber()}
 	request.sharedSecret = cardStorage.client.HashSecret
 	signature, err := request.buildSignature()
 	if err != nil {
@@ -230,7 +283,7 @@ func (cardStorage *CardStorageService) DeleteCard(request *CardStorageRequest) (
 	request.Timestamp = formatTime(Now(), "20060102150405")
 	request.MerchantID = cardStorage.client.MerchantID
 	request.Type = "card-cancel-card"
-	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.Card.Ref}
+	request.elementsToHash = []string{request.Timestamp, request.MerchantID, request.PayerRef, request.getCardRef()}
 	request.sharedSecret = cardStorage.client.HashSecret
 	signature, err := request.buildSignature()
 	if err != nil {

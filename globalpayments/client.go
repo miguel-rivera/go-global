@@ -205,7 +205,7 @@ type ServiceResponse struct {
 	OrderID             string      `xml:"orderid"`
 	AuthCode            string      `xml:"authcode"`
 	Result              string      `xml:"result"`
-	CVN                 string      `xml:"cvnresult"`
+	CVNResult           string      `xml:"cvnresult"`
 	AVSPostcodeResponse string      `xml:"avspostcoderesponse"`
 	AVSAddressResponse  string      `xml:"avsaddressresponse"`
 	BatchId             string      `xml:"batchid"`
@@ -213,7 +213,7 @@ type ServiceResponse struct {
 	PasRef              string      `xml:"pasref"`
 	TimeTaken           string      `xml:"timetaken"`
 	AuthTimeTaken       string      `xml:"authtimetaken"`
-	CardIssuer          *CardIssuer `xml:"cardIssuer"`
+	CardIssuer          *CardIssuer `xml:"cardissuer"`
 	Sha1Hash            string      `xml:"sha1hash"`
 	serviceAuthenticator
 }
@@ -232,6 +232,9 @@ type ResponseAuthenticator interface {
 
 func (authenticator *ServiceResponse) validateResponseHash(httpResponse *http.Response) (err error) {
 	signature, err := authenticator.buildSignature()
+	if err != nil {
+		return err
+	}
 	if signature == authenticator.Sha1Hash {
 		return nil
 	}
@@ -263,6 +266,7 @@ func (transmitter *service) transmitRequest(request interface{}) (response *Serv
 	}
 
 	response.elementsToHash = []string{response.Timestamp, response.MerchantID, response.OrderID, response.Result, response.Message, response.PasRef, response.AuthCode}
+	response.sharedSecret = transmitter.client.HashSecret
 	err = response.validateResponseHash(httpResponse)
 	if err != nil {
 		return nil, httpResponse, err

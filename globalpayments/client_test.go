@@ -125,7 +125,7 @@ func TestClient_Do(t *testing.T) {
 			t.Errorf("Request method: %v, want %v", got, want)
 		}
 
-		fmt.Fprint(w, requestXMLBody)
+		fmt.Fprint(w, requestXMLBody) //returned request struct for testing correct encoding
 	}
 
 	serverMux := http.NewServeMux()
@@ -141,11 +141,16 @@ func TestClient_Do(t *testing.T) {
 	client, _ := NewClient(baseUrl)
 
 	req, _ := client.NewRequest("POST", "/test", requestBody)
-	body := &request{}
 
-	client.Do(req, body)
-	if !reflect.DeepEqual(body, requestBody) {
-		t.Errorf("Response Body = %v, want %v", body, requestBody)
+	responseBody := &request{}
+
+	_, err := client.Do(req, responseBody)
+	if err != nil {
+		t.Errorf("Error performing Client.Do: %v", err)
+	}
+
+	if !reflect.DeepEqual(responseBody, requestBody) {
+		t.Errorf("Request Body = %v, want %v", responseBody, requestBody)
 	}
 }
 
@@ -239,5 +244,130 @@ func Test_ResponseAuthenticator_validateResponseHash_invalid(t *testing.T) {
 
 	if got, want := err.Error(), "Validation Hash Error: method: POST, path: /test, status code:200"; got != want {
 		t.Errorf("Incorrect Validation Error thrown got: %v, want: %v", got, want)
+	}
+}
+
+func Test_Transmitter_transmitRequest_valid(t *testing.T) {
+	// setup function that will setup client mux to be used with all test cases.
+	requestBody := &request{XMLName: xml.Name{Local: "request"}, Type: "auth", Timestamp: "20180613141207",
+		MerchantId: "testMerchant",
+		Account:    "internet"}
+
+	requestXMLBody := `<request type="auth" timestamp="20180613141207"><merchantid>testMerchant</merchantid><account>internet</account></request>`
+	responseXMLBody := `<response timestamp="20180731090859">
+						  <merchantid>MerchantId</merchantid>
+						  <account>internet</account>
+						  <orderid>OL0f0VYFQTyNG5IulhsMrg</orderid>
+						  <result>00</result>
+						  <message>Successful</message>
+						  <pasref>415d5e0f6ad247d3825284d1484bd7e9</pasref>
+						  <authcode/>
+						  <batchid/>
+						  <timetaken>1</timetaken>
+						  <processingtimetaken/>
+						  <sha1hash>81c50b9b32a5433deab0c588c0ef89d7e86b757b</sha1hash>
+						</response>`
+	expectedResponse := &ServiceResponse{
+		XMLName:              xml.Name{Local: "response"},
+		Timestamp:            "20180731090859",
+		MerchantID:           "MerchantId",
+		Account:              "internet",
+		OrderID:              "OL0f0VYFQTyNG5IulhsMrg",
+		Result:               "00",
+		Message:              "Successful",
+		PasRef:               "415d5e0f6ad247d3825284d1484bd7e9",
+		Sha1Hash:             "81c50b9b32a5433deab0c588c0ef89d7e86b757b",
+		TimeTaken:            "1",
+		serviceAuthenticator: serviceAuthenticator{sharedSecret: "Po8lRRT67a"}}
+	expectedResponse.elementsToHash = []string{expectedResponse.Timestamp, expectedResponse.MerchantID, expectedResponse.OrderID, expectedResponse.Result, expectedResponse.Message, expectedResponse.PasRef, expectedResponse.AuthCode}
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, "POST"; got != want {
+			t.Errorf("Request method: %v, want %v", got, want)
+		}
+		body, _ := ioutil.ReadAll(r.Body)
+		if !reflect.DeepEqual(string(body), requestXMLBody) {
+			t.Errorf("Request Body = %v, want %v", r.Body, requestXMLBody)
+		}
+		fmt.Fprint(w, responseXMLBody)
+	}
+
+	serverMux := http.NewServeMux()
+	serverMux.HandleFunc("/test", handler)
+	server := httptest.NewServer(serverMux)
+	defer server.Close()
+
+	baseUrl := func(client *Client) {
+		url, _ := url.Parse(server.URL)
+		client.BaseURL = url
+	}
+
+	client, _ := NewClient(baseUrl)
+	service := &service{client: client, Path: "/test"}
+
+	response, _, err := service.transmitRequest(requestBody)
+
+	if err != nil {
+		t.Errorf("Validation Error thrown on valid response %v", err)
+	}
+
+	if !reflect.DeepEqual(response, expectedResponse) {
+		t.Errorf("Response Struct = %v, want %v", response, expectedResponse)
+	}
+}
+
+func Test_Transmitter_transmitRequest_invalid(t *testing.T) {
+	// setup function that will setup client mux to be used with all test cases.
+	requestBody := &request{XMLName: xml.Name{Local: "request"}, Type: "auth", Timestamp: "20180613141207",
+		MerchantId: "testMerchant",
+		Account:    "internet"}
+
+	requestXMLBody := `<request type="auth" timestamp="20180613141207"><merchantid>testMerchant</merchantid><account>internet</account></request>`
+	responseXMLBody := `<response timestamp="20180731090859">
+						  <merchantid>MerchantId</merchantid>
+						  <account>internet</account>
+						  <orderid>OL0f0VYFQTyNG5IulhsMrg</orderid>
+						  <result>00</result>
+						  <message>Successful</message>
+						  <pasref>415d5e0f6ad247d3825284d1484bd7e9</pasref>
+						  <authcode/>
+						  <batchid/>
+						  <timetaken>1</timetaken>
+						  <processingtimetaken/>
+						  <sha1hash>INVALIDHASH</sha1hash>
+						</response>`
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.Method, "POST"; got != want {
+			t.Errorf("Request method: %v, want %v", got, want)
+		}
+		body, _ := ioutil.ReadAll(r.Body)
+		if !reflect.DeepEqual(string(body), requestXMLBody) {
+			t.Errorf("Request Body = %v, want %v", r.Body, requestXMLBody)
+		}
+		fmt.Fprint(w, responseXMLBody)
+	}
+
+	serverMux := http.NewServeMux()
+	serverMux.HandleFunc("/test", handler)
+	server := httptest.NewServer(serverMux)
+	defer server.Close()
+
+	baseUrl := func(client *Client) {
+		url, _ := url.Parse(server.URL)
+		client.BaseURL = url
+	}
+
+	client, _ := NewClient(baseUrl)
+	service := &service{client: client, Path: "/test"}
+
+	response, _, err := service.transmitRequest(requestBody)
+
+	if got, want := err.Error(), "Validation Hash Error: method: POST, path: /test, status code:200"; got != want {
+		t.Errorf("Incorrect Validation Error thrown got: %v, want: %v", got, want)
+	}
+
+	if response != nil {
+		t.Errorf("Response supposed to be nil, got: %v", response)
 	}
 }
