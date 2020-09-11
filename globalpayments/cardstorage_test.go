@@ -73,7 +73,7 @@ func TestCardStorageService_Authorize(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="receipt-in" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref>03e28f0e-492e-80bd-20ec318e9334</payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>30c625c676a5c7f7511512dbae592f1537271e91</sha1hash><amount currency="CAD">10000</amount><autosettle flag="1"></autosettle><paymentdata><cvn><number>123</number></cvn></paymentdata></request>`
+		requestXMLBody := `<request type="receipt-in" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref>03e28f0e-492e-80bd-20ec318e9334</payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>59a88d763f26bdcbbf4dd65d3b0aec0b1dd5f6f6</sha1hash><amount currency="CAD">10000</amount><autosettle flag="1"></autosettle><paymentdata><cvn><number>123</number></cvn></paymentdata></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							   <merchantid>MerchantId</merchantid>
 							   <account>internet</account>
@@ -125,7 +125,7 @@ func TestCardStorageService_Authorize(t *testing.T) {
 		CVNResult:           "M",
 		AVSPostcodeResponse: "M",
 		AVSAddressResponse:  "M",
-		BatchId:             "319623",
+		BatchID:             "319623",
 		TimeTaken:           "1",
 		AuthTimeTaken:       "0",
 		CardIssuer: &CardIssuer{
@@ -153,7 +153,7 @@ func TestCardStorageService_Validate(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="receipt-in-otb" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref>03e28f0e-492e-80bd-20ec318e9334</payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>7f571af85341d59593d28a6e5efb7993461463f3</sha1hash><paymentdata><cvn><number>123</number></cvn></paymentdata></request>`
+		requestXMLBody := `<request type="receipt-in-otb" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref>03e28f0e-492e-80bd-20ec318e9334</payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>0fc774cd46731deb27883ed3a019fe348bb8c206</sha1hash><paymentdata><cvn><number>123</number></cvn></paymentdata></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							   <merchantid>MerchantId</merchantid>
 							   <account>internet</account>
@@ -205,7 +205,7 @@ func TestCardStorageService_Validate(t *testing.T) {
 		CVNResult:           "M",
 		AVSPostcodeResponse: "M",
 		AVSAddressResponse:  "M",
-		BatchId:             "319623",
+		BatchID:             "319623",
 		TimeTaken:           "1",
 		AuthTimeTaken:       "0",
 		CardIssuer: &CardIssuer{
@@ -237,7 +237,7 @@ func TestCardStorageService_Credit(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="payment-out" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref>03e28f0e-492e-80bd-20ec318e9334</payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>30c625c676a5c7f7511512dbae592f1537271e91</sha1hash><amount currency="CAD">10000</amount></request>`
+		requestXMLBody := `<request type="payment-out" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref>03e28f0e-492e-80bd-20ec318e9334</payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>59a88d763f26bdcbbf4dd65d3b0aec0b1dd5f6f6</sha1hash><amount currency="CAD">10000</amount></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							   <merchantid>MerchantId</merchantid>
 							   <account>internet</account>
@@ -289,7 +289,7 @@ func TestCardStorageService_Credit(t *testing.T) {
 		CVNResult:           "M",
 		AVSPostcodeResponse: "M",
 		AVSAddressResponse:  "M",
-		BatchId:             "319623",
+		BatchID:             "319623",
 		TimeTaken:           "1",
 		AuthTimeTaken:       "0",
 		CardIssuer: &CardIssuer{
@@ -353,7 +353,7 @@ func TestCardStorageService_CreateCustomer(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="payer-new" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref></payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>30c625c676a5c7f7511512dbae592f1537271e91</sha1hash><amount currency="CAD">10000</amount><autosettle flag="1"></autosettle><paymentdata><cvn><number>123</number></cvn></paymentdata><payer ref="03e28f0e-492e-80bd-20ec318e9334" type="Retail" title="Mr."><firstname>James</firstname><surname>Mason</surname><company>Global Payments</company><email>text@mail.com</email><dateofbirth>19851222</dateofbirth><state>yorkshire</state><passphrase>montgomery</passphrase><vatnumber>gb 1234</vatnumber><varref>Car Part</varref><custnum>E8953893489</custnum><address><line1>Flat 123</line1><line2>House 123</line2><line3>Cul-de-sac</line3><city>Halifax</city><county>West Yorkshire</county><postcode>W6 9HR</postcode><country ref="GB"></country></address><phonenumbers><home>+35312345678</home><work>+3531987654321</work><fax>+3531987654321</fax><mobile>+3531987654321</mobile></phonenumbers></payer></request>`
+		requestXMLBody := `<request type="payer-new" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref></payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>59a88d763f26bdcbbf4dd65d3b0aec0b1dd5f6f6</sha1hash><amount currency="CAD">10000</amount><autosettle flag="1"></autosettle><paymentdata><cvn><number>123</number></cvn></paymentdata><payer ref="03e28f0e-492e-80bd-20ec318e9334" type="Retail" title="Mr."><firstname>James</firstname><surname>Mason</surname><company>Global Payments</company><email>text@mail.com</email><dateofbirth>19851222</dateofbirth><state>yorkshire</state><passphrase>montgomery</passphrase><vatnumber>gb 1234</vatnumber><varref>Car Part</varref><custnum>E8953893489</custnum><address><line1>Flat 123</line1><line2>House 123</line2><line3>Cul-de-sac</line3><city>Halifax</city><county>West Yorkshire</county><postcode>W6 9HR</postcode><country ref="GB"></country></address><phonenumbers><home>+35312345678</home><work>+3531987654321</work><fax>+3531987654321</fax><mobile>+3531987654321</mobile></phonenumbers></payer></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							   <merchantid>MerchantId</merchantid>
 							   <account>internet</account>
@@ -405,7 +405,7 @@ func TestCardStorageService_CreateCustomer(t *testing.T) {
 		CVNResult:           "M",
 		AVSPostcodeResponse: "M",
 		AVSAddressResponse:  "M",
-		BatchId:             "319623",
+		BatchID:             "319623",
 		TimeTaken:           "1",
 		AuthTimeTaken:       "0",
 		CardIssuer: &CardIssuer{
@@ -468,7 +468,7 @@ func TestCardStorageService_EditCustomer(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="payer-edit" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref></payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>9bb3edf1be1a1e9d973355f993d0f67a7dc359d5</sha1hash><amount currency="CAD">10000</amount><autosettle flag="1"></autosettle><paymentdata><cvn><number>123</number></cvn></paymentdata><payer ref="03e28f0e-492e-80bd-20ec318e9334" type="Retail" title="Mr."><firstname>James</firstname><surname>Mason</surname><company>Global Payments</company><email>text@mail.com</email><dateofbirth>19851222</dateofbirth><state>yorkshire</state><passphrase>montgomery</passphrase><vatnumber>gb 1234</vatnumber><varref>Car Part</varref><custnum>E8953893489</custnum><address><line1>Flat 123</line1><line2>House 123</line2><line3>Cul-de-sac</line3><city>Halifax</city><county>West Yorkshire</county><postcode>W6 9HR</postcode><country ref="GB"></country></address><phonenumbers><home>+35312345678</home><work>+3531987654321</work><fax>+3531987654321</fax><mobile>+3531987654321</mobile></phonenumbers></payer></request>`
+		requestXMLBody := `<request type="payer-edit" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><channel>ECOM</channel><orderid>AiCibJ5UR7utURy_slxhJw</orderid><payerref></payerref><paymentmethod>3c4af936-483e-a393-f558bec2fb2a</paymentmethod><sha1hash>9b1687d318b226fd1954f423e95507de6f481b30</sha1hash><amount currency="CAD">10000</amount><autosettle flag="1"></autosettle><paymentdata><cvn><number>123</number></cvn></paymentdata><payer ref="03e28f0e-492e-80bd-20ec318e9334" type="Retail" title="Mr."><firstname>James</firstname><surname>Mason</surname><company>Global Payments</company><email>text@mail.com</email><dateofbirth>19851222</dateofbirth><state>yorkshire</state><passphrase>montgomery</passphrase><vatnumber>gb 1234</vatnumber><varref>Car Part</varref><custnum>E8953893489</custnum><address><line1>Flat 123</line1><line2>House 123</line2><line3>Cul-de-sac</line3><city>Halifax</city><county>West Yorkshire</county><postcode>W6 9HR</postcode><country ref="GB"></country></address><phonenumbers><home>+35312345678</home><work>+3531987654321</work><fax>+3531987654321</fax><mobile>+3531987654321</mobile></phonenumbers></payer></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							   <merchantid>MerchantId</merchantid>
 							   <account>internet</account>
@@ -520,7 +520,7 @@ func TestCardStorageService_EditCustomer(t *testing.T) {
 		CVNResult:           "M",
 		AVSPostcodeResponse: "M",
 		AVSAddressResponse:  "M",
-		BatchId:             "319623",
+		BatchID:             "319623",
 		TimeTaken:           "1",
 		AuthTimeTaken:       "0",
 		CardIssuer: &CardIssuer{
@@ -552,7 +552,7 @@ func TestCardStorageService_StoreCard(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="card-new" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>F-2knQ0iShKK6ezfaSLh2Q</orderid><payerref></payerref><sha1hash>9bca8948ce624c38ad447814d029432df9bfd6a3</sha1hash><card><ref>3c4af936-483e-a393-f558bec2fb2a</ref><payerref>0f357b45-9aa4-4453-a685-c69232e9024f</payerref><number>4263970000005262</number><expdate>0519</expdate><chname>James Mason</chname><type>VISA</type></card></request>`
+		requestXMLBody := `<request type="card-new" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>F-2knQ0iShKK6ezfaSLh2Q</orderid><payerref></payerref><sha1hash>c70058f6da8bb64202ce8096e3d7f36c2be4f781</sha1hash><card><ref>3c4af936-483e-a393-f558bec2fb2a</ref><payerref>0f357b45-9aa4-4453-a685-c69232e9024f</payerref><number>4263970000005262</number><expdate>0519</expdate><chname>James Mason</chname><type>VISA</type></card></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							  <merchantid>MerchantId</merchantid>
 							  <account>internet</account>
@@ -614,7 +614,7 @@ func TestCardStorageService_EditCard(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="card-update-card" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>F-2knQ0iShKK6ezfaSLh2Q</orderid><payerref></payerref><sha1hash>86b506de7bfc979845e06a8cdd79a3c776530bc8</sha1hash><card><ref>3c4af936-483e-a393-f558bec2fb2a</ref><payerref>0f357b45-9aa4-4453-a685-c69232e9024f</payerref><number>4263970000005262</number><expdate>0519</expdate><chname>James Mason</chname><type>VISA</type></card></request>`
+		requestXMLBody := `<request type="card-update-card" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>F-2knQ0iShKK6ezfaSLh2Q</orderid><payerref></payerref><sha1hash>206184f8fdc6813cc39231b309ca65c991f4b814</sha1hash><card><ref>3c4af936-483e-a393-f558bec2fb2a</ref><payerref>0f357b45-9aa4-4453-a685-c69232e9024f</payerref><number>4263970000005262</number><expdate>0519</expdate><chname>James Mason</chname><type>VISA</type></card></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							  <merchantid>MerchantId</merchantid>
 							  <account>internet</account>
@@ -671,7 +671,7 @@ func TestCardStorageService_DeleteCard(t *testing.T) {
 	client, mux, _, teardown := setup()
 	defer teardown()
 	mux.HandleFunc(apiURLPath, func(w http.ResponseWriter, r *http.Request) {
-		requestXMLBody := `<request type="card-update-card" timestamp="20180614055000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>F-2knQ0iShKK6ezfaSLh2Q</orderid><payerref></payerref><sha1hash>9e5efc186cd6f728cece9d4ba778091f0e401b4f</sha1hash><card><ref>3c4af936-483e-a393-f558bec2fb2a</ref><payerref>0f357b45-9aa4-4453-a685-c69232e9024f</payerref><number></number><expdate></expdate><chname></chname><type></type></card></request>`
+		requestXMLBody := `<request type="card-update-card" timestamp="20180614095000"><merchantid>realexsandbox</merchantid><account>internet</account><orderid>F-2knQ0iShKK6ezfaSLh2Q</orderid><payerref></payerref><sha1hash>e2bbe2065a11c5d6829ab988f0c4234f78599363</sha1hash><card><ref>3c4af936-483e-a393-f558bec2fb2a</ref><payerref>0f357b45-9aa4-4453-a685-c69232e9024f</payerref><number></number><expdate></expdate><chname></chname><type></type></card></request>`
 		responseXMLBody := `<response timestamp="20180731090859">
 							  <merchantid>MerchantId</merchantid>
 							  <account>internet</account>
