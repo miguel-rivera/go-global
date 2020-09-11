@@ -40,6 +40,7 @@ const (
 
 // Global Payment Error values
 
+//ValidationError for responses for when the SHA1HASH has been tampered with
 type ValidationError struct {
 	Response *http.Response
 }
@@ -47,40 +48,6 @@ type ValidationError struct {
 func (err *ValidationError) Error() string {
 	return fmt.Sprintf("Validation Hash Error: method: %v, path: %v, status code:%d", err.Response.Request.Method,
 		err.Response.Request.URL.Path, err.Response.StatusCode)
-}
-
-type DependencyError struct {
-	ResponseCode string
-	Message      string
-	Response     *http.Response
-}
-
-func (err *DependencyError) Error() string {
-	return fmt.Sprintf("Dependency Error: %v, %v : %d response code: %v, message: %v ", err.Response.Request.Method,
-		err.Response.Request.URL, err.Response.StatusCode, err.ResponseCode, err.Message)
-}
-
-type RequestFormatError struct {
-	ResponseCode string
-	Message      string
-	Response     *http.Response
-}
-
-func (err *RequestFormatError) Error() string {
-	return fmt.Sprintf("Request Format Error: %v, %v : %d response code: %v, message: %v ", err.Response.Request.Method,
-		err.Response.Request.URL, err.Response.StatusCode, err.ResponseCode, err.Message)
-}
-
-type InvalidAccountError struct {
-	ResponseCode string
-	Message      string
-	Response     *http.Response
-}
-
-func (err *InvalidAccountError) Error() string {
-	return fmt.Sprintf("Invalid Account Error: %v, %v : %d response code: %v, message: %v ",
-		err.Response.Request.Method,
-		err.Response.Request.URL, err.Response.StatusCode, err.ResponseCode, err.Message)
 }
 
 // NewClient returns a Global Payments API Client. If no functional options are provided, Default values will be used to initiate the client.
@@ -164,11 +131,13 @@ type serviceAuthenticator struct {
 	sharedSecret   string
 }
 
+//Marshaller interface for marshalling data
 type Marshaller interface {
 	io.Writer
 	Sum(b []byte) []byte
 }
 
+//Authenticator interface for authentication of requests and responses
 type Authenticator interface {
 	hashAndEncode(m Marshaller, str string) (hashAndEncodedString string, err error)
 	buildSignature() (signature string, err error)
@@ -197,6 +166,7 @@ func (authenticator *serviceAuthenticator) hashAndEncode(m Marshaller, str strin
 	return hex.EncodeToString(m.Sum(nil)), nil
 }
 
+//ServiceResponse all Global payments requests contain the same response structure
 type ServiceResponse struct {
 	XMLName             xml.Name    `xml:"response"`
 	Timestamp           string      `xml:"timestamp,attr"`
@@ -208,7 +178,7 @@ type ServiceResponse struct {
 	CVNResult           string      `xml:"cvnresult"`
 	AVSPostcodeResponse string      `xml:"avspostcoderesponse"`
 	AVSAddressResponse  string      `xml:"avsaddressresponse"`
-	BatchId             string      `xml:"batchid"`
+	BatchID             string      `xml:"batchid"`
 	Message             string      `xml:"message"`
 	PasRef              string      `xml:"pasref"`
 	TimeTaken           string      `xml:"timetaken"`
@@ -218,6 +188,7 @@ type ServiceResponse struct {
 	serviceAuthenticator
 }
 
+//CardIssuer response struct
 type CardIssuer struct {
 	Bank        string `xml:"bank"`
 	Country     string `xml:"country"`
@@ -225,6 +196,7 @@ type CardIssuer struct {
 	Region      string `xml:"region"`
 }
 
+//ResponseAuthenticator interface for response validation of signature
 type ResponseAuthenticator interface {
 	Authenticator
 	validateSignature(httpResponse *http.Response) (err error)
@@ -241,6 +213,7 @@ func (authenticator *ServiceResponse) validateResponseHash(httpResponse *http.Re
 	return &ValidationError{httpResponse}
 }
 
+//Transmitter for services that transmit requests
 type Transmitter interface {
 	transmitRequest(interface{}) (response *ServiceResponse, httpResponse *http.Response,
 		err error)

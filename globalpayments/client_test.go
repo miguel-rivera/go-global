@@ -16,7 +16,7 @@ type request struct {
 	XMLName    xml.Name `xml:"request"`
 	Type       string   `xml:"type,attr"`
 	Timestamp  string   `xml:"timestamp,attr"`
-	MerchantId string   `xml:"merchantid"`
+	MerchantID string   `xml:"merchantid"`
 	Account    string   `xml:"account"`
 }
 
@@ -29,7 +29,7 @@ func TestClient_NewClient_DefaultValues(t *testing.T) {
 	}
 
 	if got, want := client.BaseURL.String(), DefaultBaseURL; got != want {
-		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
+		t.Errorf("NewClient baseURL is %v, want %v", got, want)
 	}
 
 	if got, want := client.HashSecret, DefaultHashSecret; got != want {
@@ -48,7 +48,7 @@ func TestClient_NewClient_DefaultValues(t *testing.T) {
 
 func TestClient_NewClient_VariadicFunctionsConfiguration(t *testing.T) {
 
-	baseUrl := func(client *Client) {
+	baseURL := func(client *Client) {
 		url, _ := url.Parse("https://testing.go")
 		client.BaseURL = url
 	}
@@ -57,20 +57,20 @@ func TestClient_NewClient_VariadicFunctionsConfiguration(t *testing.T) {
 		client.HashSecret = "testing"
 	}
 
-	merchantId := func(client *Client) {
+	merchantID := func(client *Client) {
 		client.MerchantID = "testMerchant"
 	}
 
 	httpClient := &http.Client{}
 
-	setHttpClient := func(client *Client) {
+	setHTTPClient := func(client *Client) {
 		client.HTTPClient = httpClient
 	}
 
-	client, _ := NewClient(baseUrl, hashSecret, merchantId, setHttpClient)
+	client, _ := NewClient(baseURL, hashSecret, merchantID, setHTTPClient)
 
 	if got, want := client.BaseURL.String(), "https://testing.go"; got != want {
-		t.Errorf("NewClient BaseURL is %v, want %v", got, want)
+		t.Errorf("NewClient baseURL is %v, want %v", got, want)
 	}
 	if got, want := client.HashSecret, "testing"; got != want {
 		t.Errorf("NewClient HashSecret is %v, want %v", got, want)
@@ -90,7 +90,7 @@ func TestClient_NewRequest(t *testing.T) {
 	method := "POST"
 	inURL, outURL := "/test", DefaultBaseURL+"/test"
 
-	requestBody := &request{Type: "auth", Timestamp: "20180613141207", MerchantId: "testMerchant",
+	requestBody := &request{Type: "auth", Timestamp: "20180613141207", MerchantID: "testMerchant",
 		Account: "internet"}
 
 	requestXMLBody := `<request type="auth" timestamp="20180613141207"><merchantid>testMerchant</merchantid><account>internet</account></request>`
@@ -115,7 +115,7 @@ func TestClient_NewRequest(t *testing.T) {
 func TestClient_Do(t *testing.T) {
 
 	requestBody := &request{XMLName: xml.Name{Local: "request"}, Type: "auth", Timestamp: "20180613141207",
-		MerchantId: "testMerchant",
+		MerchantID: "testMerchant",
 		Account:    "internet"}
 
 	requestXMLBody := `<request type="auth" timestamp="20180613141207"><merchantid>testMerchant</merchantid><account>internet</account></request>`
@@ -133,12 +133,12 @@ func TestClient_Do(t *testing.T) {
 	server := httptest.NewServer(serverMux)
 	defer server.Close()
 
-	baseUrl := func(client *Client) {
+	baseURL := func(client *Client) {
 		url, _ := url.Parse(server.URL)
 		client.BaseURL = url
 	}
 
-	client, _ := NewClient(baseUrl)
+	client, _ := NewClient(baseURL)
 
 	req, _ := client.NewRequest("POST", "/test", requestBody)
 
@@ -250,7 +250,7 @@ func Test_ResponseAuthenticator_validateResponseHash_invalid(t *testing.T) {
 func Test_Transmitter_transmitRequest_valid(t *testing.T) {
 	// setup function that will setup client mux to be used with all test cases.
 	requestBody := &request{XMLName: xml.Name{Local: "request"}, Type: "auth", Timestamp: "20180613141207",
-		MerchantId: "testMerchant",
+		MerchantID: "testMerchant",
 		Account:    "internet"}
 
 	requestXMLBody := `<request type="auth" timestamp="20180613141207"><merchantid>testMerchant</merchantid><account>internet</account></request>`
@@ -297,12 +297,12 @@ func Test_Transmitter_transmitRequest_valid(t *testing.T) {
 	server := httptest.NewServer(serverMux)
 	defer server.Close()
 
-	baseUrl := func(client *Client) {
+	baseURL := func(client *Client) {
 		url, _ := url.Parse(server.URL)
 		client.BaseURL = url
 	}
 
-	client, _ := NewClient(baseUrl)
+	client, _ := NewClient(baseURL)
 	service := &service{client: client, Path: "/test"}
 
 	response, _, err := service.transmitRequest(requestBody)
@@ -319,7 +319,7 @@ func Test_Transmitter_transmitRequest_valid(t *testing.T) {
 func Test_Transmitter_transmitRequest_invalid(t *testing.T) {
 	// setup function that will setup client mux to be used with all test cases.
 	requestBody := &request{XMLName: xml.Name{Local: "request"}, Type: "auth", Timestamp: "20180613141207",
-		MerchantId: "testMerchant",
+		MerchantID: "testMerchant",
 		Account:    "internet"}
 
 	requestXMLBody := `<request type="auth" timestamp="20180613141207"><merchantid>testMerchant</merchantid><account>internet</account></request>`
@@ -353,12 +353,12 @@ func Test_Transmitter_transmitRequest_invalid(t *testing.T) {
 	server := httptest.NewServer(serverMux)
 	defer server.Close()
 
-	baseUrl := func(client *Client) {
+	baseURL := func(client *Client) {
 		url, _ := url.Parse(server.URL)
 		client.BaseURL = url
 	}
 
-	client, _ := NewClient(baseUrl)
+	client, _ := NewClient(baseURL)
 	service := &service{client: client, Path: "/test"}
 
 	response, _, err := service.transmitRequest(requestBody)
