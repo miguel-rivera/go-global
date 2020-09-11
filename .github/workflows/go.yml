@@ -1,3 +1,28 @@
 name: Test and Lint
-on: push
+on:
+  push:
+  pull_request:
 jobs:
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.14.0'
+
+      - name: Install Linter
+        run: |
+          go version
+          go get -u golang.org/x/lint/golint
+
+      - name: Run lint
+        run: |
+          golint ./globalpayments
+
+      - name: Run test
+        run: |
+          go test -v ./globalpayments
